@@ -1,0 +1,126 @@
+{
+  "jira_key": "KUDO-35",
+  "title": "Family members list — E2E scenarios",
+  "prerequisites": [
+    "Staging app with test family, location/health mocks or fixtures as needed; Firebase Remote Config overridable in non-prod.",
+    "Safety badge matrix from design/KUDO-35 available for visual assertions (or use placeholder states until attached)."
+  ],
+  "test_cases": [
+    {
+      "id": "KUDO-35-E2E-001",
+      "category": "e2e_list_happy_path",
+      "title": "Open family list — layout, ordering, and “You” last",
+      "test_type": "positive",
+      "preconditions": "Signed-in user with ≥3 family members (mix of Safe / Not safe). Include at least one long display name and one with unicode/special characters if available.",
+      "steps": [
+        "Launch the app (or resume cold start) and navigate to the Family members list.",
+        "Capture row order and visible content for each member.",
+        "Confirm the current user row is labeled as “You” and appears as the last row.",
+        "Confirm every row shows an avatar and a single-line name (long names ellipsized, no wrap)."
+      ],
+      "expected_result": "List loads without error. Not safe members appear above all Safe members; within each group names sort A→Z. “You” is always last. Avatars present; names stay on one line with ellipsis when needed."
+    },
+    {
+      "id": "KUDO-35-E2E-002",
+      "category": "e2e_refresh",
+      "title": "List stays fresh — foreground interval and return from background",
+      "test_type": "positive",
+      "preconditions": "On the list screen; ability to change member data or ordering from backend/fixture while app runs. RC list-refresh interval at default (5 s) unless testing override in the same run with RC staging.",
+      "steps": [
+        "With the app foregrounded on the list, change data that affects order or row content; wait without leaving the screen until the next refresh cycle.",
+        "Background the app, apply another change, return to foreground and reopen or land on the list.",
+        "Optionally scroll mid-list before refresh and confirm scroll/selection behavior is acceptable (no duplicates, no stuck loading)."
+      ],
+      "expected_result": "Foreground: list picks up changes on the RC-driven interval (~5 s default). Returning from background: list reloads order and row data without requiring force-quit. UI remains stable across refresh (no duplicate rows / broken scroll per product expectations)."
+    },
+    {
+      "id": "KUDO-35-E2E-003",
+      "category": "e2e_safety_badge",
+      "title": "Safety badge and list reorder after status changes",
+      "test_type": "positive",
+      "preconditions": "Fixture or second device can flip a member between Safe and Not safe; start on list with known states.",
+      "steps": [
+        "Note a member’s badge and position.",
+        "Toggle that member to Not safe; wait for refresh.",
+        "Toggle back to Safe; wait for refresh."
+      ],
+      "expected_result": "Badge matches design for each state. After each change, ordering rules still hold (Not safe block above Safe; A→Z within blocks; You last). No indefinitely stale badge."
+    },
+    {
+      "id": "KUDO-35-E2E-004",
+      "category": "e2e_speed_and_health",
+      "title": "Vehicle vs non-vehicle — speed and health visibility",
+      "test_type": "positive",
+      "preconditions": "One member can be driven in vehicle (>6 km/h, hysteresis satisfied); same or another member walking/stationary with today’s health samples (Apple Health / Health Connect) for multiple metric types.",
+      "steps": [
+        "With the vehicle member in sustained vehicle state, open the list: confirm speed is shown and health summaries are hidden.",
+        "With the walking/stationary member, confirm speed is not shown and up to two health indicator types appear for “today” (viewer-local day) with plausible formatted values (steps, sleep, HR, BP, glucose per copy).",
+        "If timestamps tie, confirm priority BP → Blood sugar → Sleep → HR → Steps matches implementation (spot-check with fixture)."
+      ],
+      "expected_result": "Speed only when In a vehicle. Health hidden entirely in vehicle. When not in vehicle, health rules and formatting match product (incl. mmHg spelling, “Blood sugar” label); empty state when no data—no fake numbers."
+    },
+    {
+      "id": "KUDO-35-E2E-005",
+      "category": "e2e_low_battery",
+      "title": "Low battery indicator and RC threshold",
+      "test_type": "positive",
+      "preconditions": "Device or mock can set member battery around default RC threshold (10%).",
+      "steps": [
+        "Set battery clearly above threshold: open list — no “Low battery” label.",
+        "Set battery clearly below threshold: label appears with exact copy “Low battery”.",
+        "If staging allows, change RC threshold and repeat one above/below check."
+      ],
+      "expected_result": "Indicator follows RC threshold (default 10%). Label text is exactly “Low battery”. Activity status later stays consistent with low-battery yes/no when member is online."
+    },
+    {
+      "id": "KUDO-35-E2E-006",
+      "category": "e2e_activity_online",
+      "title": "Online activity line — place, movement, phone, weather, time, connectivity",
+      "test_type": "positive",
+      "preconditions": "Member online with controllable GPS/precise location, motion, call state, and (if available) weather/time fixtures.",
+      "steps": [
+        "Exercise one representative place branch (e.g. home/saved) and one “other” branch with stayed ≥ RC minutes (default 20) vs never stayed / under threshold.",
+        "Exercise walking vs vehicle with hysteresis (RC default 6 s) and no-GPS / precise-off variants as one consolidated pass.",
+        "Trigger in-call and active phone-use states; optional severe weather and local late-night window (21:00–05:00) if harness supports.",
+        "Confirm activity text uses at most two lines with trimmed overflow."
+      ],
+      "expected_result": "Activity string reflects the combined rules for the configured states (per product copy). Walk/vehicle switches respect hysteresis. Layout stays ≤2 lines with ellipsis. No offline template while online."
+    },
+    {
+      "id": "KUDO-35-E2E-007",
+      "category": "e2e_activity_offline",
+      "title": "Offline — only “No connection, last seen …” variants",
+      "test_type": "positive",
+      "preconditions": "Member can be taken offline with controlled “last seen” offsets (fixtures for <1 min, minutes, hours, days, very old).",
+      "steps": [
+        "For each last-seen band, open the list and read the full activity line.",
+        "While offline, confirm no speed, health chips, or extra place/movement fragments appear on the row."
+      ],
+      "expected_result": "Only offline family strings: “just now”, “Xm ago”, “Yh ago”, “Zd ago”, or “No connection long time ago” per implementation. No other status fragments. Row extras (speed/health) absent unless product explicitly differs."
+    },
+    {
+      "id": "KUDO-35-E2E-008",
+      "category": "e2e_remote_config",
+      "title": "Remote Config drives timing thresholds (single harness pass)",
+      "test_type": "positive",
+      "preconditions": "Non-prod RC or mock exposes list refresh interval, low-battery %, stayed-place minutes, walk/vehicle hysteresis.",
+      "steps": [
+        "Set non-default values for each key (one session).",
+        "Observe list refresh cadence, low-battery visibility, stayed-place classification, and walk/vehicle switching delay align with those values."
+      ],
+      "expected_result": "Each RC parameter affects the corresponding UI/behavior; reverting to defaults restores default behavior (5 s refresh, 10% battery, 20 min stayed, 6 s hysteresis)."
+    },
+    {
+      "id": "KUDO-35-E2E-009",
+      "category": "e2e_negative_smoke",
+      "title": "Smoke — no speed/health leakage in wrong states",
+      "test_type": "negative",
+      "preconditions": "Members in walking, stationary, no-location, and offline states as available.",
+      "steps": [
+        "On each row in those states, assert speed is absent unless vehicle state is truly active.",
+        "For offline rows, assert activity is only the offline last-seen pattern."
+      ],
+      "expected_result": "No speed when not in vehicle; offline rows do not mix in online activity fragments."
+    }
+  ]
+}
