@@ -1,771 +1,126 @@
 {
   "jira_key": "KUDO-35",
-  "title": "Family members list — manual UAT/regression",
+  "title": "Family members list — E2E scenarios",
   "prerequisites": [
-    "Safety badge states and artwork must be confirmed against the product/design table referenced in Jira KUDO-35. Until that matrix is attached to the ticket or spec, badge-specific cases below are authored with explicit TBD state names—do not sign off badge visuals without that alignment.",
-    "Firebase Remote Config keys for family list refresh interval, low-battery threshold, stayed-place minutes, and walk/vehicle hysteresis must be identifiable in the RC console (or documented) for the RC matrix cases.",
-    "Health data requires Apple Health (iOS) or Health Connect (Android) test fixtures and members in known movement/location states. Use a staging build with RC overrides where production RC cannot be changed."
+    "Staging app with test family, location/health mocks or fixtures as needed; Firebase Remote Config overridable in non-prod.",
+    "Safety badge matrix from design/KUDO-35 available for visual assertions (or use placeholder states until attached)."
   ],
   "test_cases": [
     {
-      "id": "KUDO-35-FML-ORD-001",
-      "category": "list_ordering",
-      "title": "All members Safe — alphabetical with You last",
+      "id": "KUDO-35-E2E-001",
+      "category": "e2e_list_happy_path",
+      "title": "Open family list — layout, ordering, and “You” last",
       "test_type": "positive",
-      "preconditions": "Family has three or more members; all are in Safe state; display names are distinct.",
+      "preconditions": "Signed-in user with ≥3 family members (mix of Safe / Not safe). Include at least one long display name and one with unicode/special characters if available.",
       "steps": [
-        "Open the family members list screen.",
-        "Record the on-screen order of rows by display name (excluding grouping headers if any).",
-        "Identify the row labeled as the current user (“You”)."
+        "Launch the app (or resume cold start) and navigate to the Family members list.",
+        "Capture row order and visible content for each member.",
+        "Confirm the current user row is labeled as “You” and appears as the last row.",
+        "Confirm every row shows an avatar and a single-line name (long names ellipsized, no wrap)."
       ],
-      "expected_result": "Non-You members appear in a single group sorted A→Z by display name (locale-aware per product). The “You” row is the last row in the list regardless of whether “You” would sort earlier alphabetically."
+      "expected_result": "List loads without error. Not safe members appear above all Safe members; within each group names sort A→Z. “You” is always last. Avatars present; names stay on one line with ellipsis when needed."
     },
     {
-      "id": "KUDO-35-FML-ORD-002",
-      "category": "list_ordering",
-      "title": "All members Not safe — alphabetical with You last",
+      "id": "KUDO-35-E2E-002",
+      "category": "e2e_refresh",
+      "title": "List stays fresh — foreground interval and return from background",
       "test_type": "positive",
-      "preconditions": "All members including You are in Not safe state (per badge rules once design table is fixed).",
+      "preconditions": "On the list screen; ability to change member data or ordering from backend/fixture while app runs. RC list-refresh interval at default (5 s) unless testing override in the same run with RC staging.",
       "steps": [
-        "Open the family members list.",
-        "Note order of all rows."
+        "With the app foregrounded on the list, change data that affects order or row content; wait without leaving the screen until the next refresh cycle.",
+        "Background the app, apply another change, return to foreground and reopen or land on the list.",
+        "Optionally scroll mid-list before refresh and confirm scroll/selection behavior is acceptable (no duplicates, no stuck loading)."
       ],
-      "expected_result": "All members sort A→Z by display name within the Not safe group; “You” remains the bottom row even if Not safe."
+      "expected_result": "Foreground: list picks up changes on the RC-driven interval (~5 s default). Returning from background: list reloads order and row data without requiring force-quit. UI remains stable across refresh (no duplicate rows / broken scroll per product expectations)."
     },
     {
-      "id": "KUDO-35-FML-ORD-003",
-      "category": "list_ordering",
-      "title": "Mixed Safe and Not safe — Not safe above Safe, You last",
+      "id": "KUDO-35-E2E-003",
+      "category": "e2e_safety_badge",
+      "title": "Safety badge and list reorder after status changes",
       "test_type": "positive",
-      "preconditions": "At least two Not safe and two Safe members; “You” is Safe.",
+      "preconditions": "Fixture or second device can flip a member between Safe and Not safe; start on list with known states.",
       "steps": [
-        "Open the family members list.",
-        "Split mentally into contiguous blocks: Not safe block, then Safe block."
+        "Note a member’s badge and position.",
+        "Toggle that member to Not safe; wait for refresh.",
+        "Toggle back to Safe; wait for refresh."
       ],
-      "expected_result": "Every Not safe row appears above every Safe row. Within Not safe: A→Z. Within Safe: A→Z. “You” is last overall."
+      "expected_result": "Badge matches design for each state. After each change, ordering rules still hold (Not safe block above Safe; A→Z within blocks; You last). No indefinitely stale badge."
     },
     {
-      "id": "KUDO-35-FML-ORD-004",
-      "category": "list_ordering",
-      "title": "Mixed — “You” is Not safe — still last",
+      "id": "KUDO-35-E2E-004",
+      "category": "e2e_speed_and_health",
+      "title": "Vehicle vs non-vehicle — speed and health visibility",
       "test_type": "positive",
-      "preconditions": "“You” is Not safe; other members mix of Safe/Not safe.",
+      "preconditions": "One member can be driven in vehicle (>6 km/h, hysteresis satisfied); same or another member walking/stationary with today’s health samples (Apple Health / Health Connect) for multiple metric types.",
       "steps": [
-        "Open the family members list.",
-        "Confirm position of “You” relative to other Not safe names."
+        "With the vehicle member in sustained vehicle state, open the list: confirm speed is shown and health summaries are hidden.",
+        "With the walking/stationary member, confirm speed is not shown and up to two health indicator types appear for “today” (viewer-local day) with plausible formatted values (steps, sleep, HR, BP, glucose per copy).",
+        "If timestamps tie, confirm priority BP → Blood sugar → Sleep → HR → Steps matches implementation (spot-check with fixture)."
       ],
-      "expected_result": "“You” remains the final row; other Not safe members sort A→Z above Safe group; Safe group A→Z."
+      "expected_result": "Speed only when In a vehicle. Health hidden entirely in vehicle. When not in vehicle, health rules and formatting match product (incl. mmHg spelling, “Blood sugar” label); empty state when no data—no fake numbers."
     },
     {
-      "id": "KUDO-35-FML-ORD-005",
-      "category": "list_ordering",
-      "title": "Duplicate-style display names — stable tie-break",
+      "id": "KUDO-35-E2E-005",
+      "category": "e2e_low_battery",
+      "title": "Low battery indicator and RC threshold",
       "test_type": "positive",
-      "preconditions": "Two different members share the same display name string (or differ only by trimming); product defines tie-break (e.g. internal id)—document observed rule.",
+      "preconditions": "Device or mock can set member battery around default RC threshold (10%).",
       "steps": [
-        "Open the list with both members in the same safety group.",
-        "Note relative order."
+        "Set battery clearly above threshold: open list — no “Low battery” label.",
+        "Set battery clearly below threshold: label appears with exact copy “Low battery”.",
+        "If staging allows, change RC threshold and repeat one above/below check."
       ],
-      "expected_result": "Order is deterministic (same on reload within same data). A→Z still holds; for identical sort keys, implementation-defined secondary order is consistent. Log actual rule for regression."
+      "expected_result": "Indicator follows RC threshold (default 10%). Label text is exactly “Low battery”. Activity status later stays consistent with low-battery yes/no when member is online."
     },
     {
-      "id": "KUDO-35-FML-ORD-006",
-      "category": "list_ordering",
-      "title": "Special characters and unicode in display names",
+      "id": "KUDO-35-E2E-006",
+      "category": "e2e_activity_online",
+      "title": "Online activity line — place, movement, phone, weather, time, connectivity",
       "test_type": "positive",
-      "preconditions": "Members with names including emoji, hyphen, apostrophe, accented characters; same safety grouping.",
+      "preconditions": "Member online with controllable GPS/precise location, motion, call state, and (if available) weather/time fixtures.",
       "steps": [
-        "Open the list.",
-        "Compare order to product-defined collation (locale)."
+        "Exercise one representative place branch (e.g. home/saved) and one “other” branch with stayed ≥ RC minutes (default 20) vs never stayed / under threshold.",
+        "Exercise walking vs vehicle with hysteresis (RC default 6 s) and no-GPS / precise-off variants as one consolidated pass.",
+        "Trigger in-call and active phone-use states; optional severe weather and local late-night window (21:00–05:00) if harness supports.",
+        "Confirm activity text uses at most two lines with trimmed overflow."
       ],
-      "expected_result": "Sorting matches documented collation for the app store region; no crash; “You” still last."
+      "expected_result": "Activity string reflects the combined rules for the configured states (per product copy). Walk/vehicle switches respect hysteresis. Layout stays ≤2 lines with ellipsis. No offline template while online."
     },
     {
-      "id": "KUDO-35-FML-ORD-007",
-      "category": "list_ordering",
-      "title": "Single member — only You",
+      "id": "KUDO-35-E2E-007",
+      "category": "e2e_activity_offline",
+      "title": "Offline — only “No connection, last seen …” variants",
       "test_type": "positive",
-      "preconditions": "Family contains only the current user.",
+      "preconditions": "Member can be taken offline with controlled “last seen” offsets (fixtures for <1 min, minutes, hours, days, very old).",
       "steps": [
-        "Open the family members list."
+        "For each last-seen band, open the list and read the full activity line.",
+        "While offline, confirm no speed, health chips, or extra place/movement fragments appear on the row."
       ],
-      "expected_result": "One row for “You”; no ordering regressions or empty states incorrectly shown."
+      "expected_result": "Only offline family strings: “just now”, “Xm ago”, “Yh ago”, “Zd ago”, or “No connection long time ago” per implementation. No other status fragments. Row extras (speed/health) absent unless product explicitly differs."
     },
     {
-      "id": "KUDO-35-FML-REL-001",
-      "category": "reload_remote_config",
-      "title": "Foreground periodic reload uses RC default interval (5 s)",
+      "id": "KUDO-35-E2E-008",
+      "category": "e2e_remote_config",
+      "title": "Remote Config drives timing thresholds (single harness pass)",
       "test_type": "positive",
-      "preconditions": "RC key for list refresh interval reset to default (expected default 5 seconds) or fresh install; app foregrounded on list screen; tooling to observe network refresh or UI timestamp if exposed (otherwise use screen recording).",
+      "preconditions": "Non-prod RC or mock exposes list refresh interval, low-battery %, stayed-place minutes, walk/vehicle hysteresis.",
       "steps": [
-        "Stay on the family members list with the app in foreground.",
-        "Change a server-side or mock-controlled attribute that affects ordering or row data (or use test harness).",
-        "Measure time until list reflects change without leaving the screen."
+        "Set non-default values for each key (one session).",
+        "Observe list refresh cadence, low-battery visibility, stayed-place classification, and walk/vehicle switching delay align with those values."
       ],
-      "expected_result": "List picks up new ordering/data within approximately the default interval (5 s), subject to network; no manual navigation required while foregrounded."
+      "expected_result": "Each RC parameter affects the corresponding UI/behavior; reverting to defaults restores default behavior (5 s refresh, 10% battery, 20 min stayed, 6 s hysteresis)."
     },
     {
-      "id": "KUDO-35-FML-REL-002",
-      "category": "reload_remote_config",
-      "title": "Foreground reload respects overridden RC interval",
-      "test_type": "positive",
-      "preconditions": "RC interval changed to a different value (e.g. 15 s); same observability as REL-001.",
-      "steps": [
-        "Trigger a data change that affects the list.",
-        "Measure refresh latency on foreground list."
-      ],
-      "expected_result": "Refresh cadence matches overridden RC value within reasonable tolerance; not stuck on 5 s if RC says otherwise."
-    },
-    {
-      "id": "KUDO-35-FML-REL-003",
-      "category": "reload_remote_config",
-      "title": "Return from background reloads order and dependent row data",
-      "test_type": "positive",
-      "preconditions": "App backgrounded; meanwhile member safety or names change (fixture or second device).",
-      "steps": [
-        "Open list, note order.",
-        "Background the app; apply change; return to foreground on same screen or navigate back to list.",
-        "Compare list to expected."
-      ],
-      "expected_result": "Order and dependent fields reload when returning from background without requiring a full app kill."
-    },
-    {
-      "id": "KUDO-35-FML-REL-004",
-      "category": "reload_remote_config",
-      "title": "Foreground refresh does not break scroll or selection expectations",
-      "test_type": "positive",
-      "preconditions": "List scrollable; if the product defines row selection/focus, enable that state.",
-      "steps": [
-        "Scroll mid-list.",
-        "Wait through at least one periodic refresh.",
-        "If selection exists, observe whether spec requires preserve or reset—verify against product."
-      ],
-      "expected_result": "Behavior matches product spec (e.g. scroll position preserved or intentionally reset); no jarring jump, duplicated rows, or stuck loading state. File defect if spec silent and UX is unusable."
-    },
-    {
-      "id": "KUDO-35-FML-ROW-001",
-      "category": "row_elements",
-      "title": "Avatar always present on each row",
-      "test_type": "positive",
-      "preconditions": "Multiple members visible.",
-      "steps": [
-        "Inspect each row on the family members list."
-      ],
-      "expected_result": "Every row shows an avatar (image or approved placeholder); no blank avatar area unless explicitly specified for pending invites (if applicable)."
-    },
-    {
-      "id": "KUDO-35-FML-ROW-002",
-      "category": "row_elements",
-      "title": "Name single line with end ellipsis when long",
-      "test_type": "positive",
-      "preconditions": "A member with a very long display name.",
-      "steps": [
-        "Open the list; locate the long name row.",
-        "Observe text layout."
-      ],
-      "expected_result": "Name occupies at most one line; overflow is trimmed with ellipsis (or equivalent) per platform; text does not wrap to a second line."
-    },
-    {
-      "id": "KUDO-35-FML-ROW-003",
-      "category": "row_elements",
-      "title": "Negative — name must not wrap to multiple lines",
+      "id": "KUDO-35-E2E-009",
+      "category": "e2e_negative_smoke",
+      "title": "Smoke — no speed/health leakage in wrong states",
       "test_type": "negative",
-      "preconditions": "Extremely long single-token name.",
+      "preconditions": "Members in walking, stationary, no-location, and offline states as available.",
       "steps": [
-        "View the row."
+        "On each row in those states, assert speed is absent unless vehicle state is truly active.",
+        "For offline rows, assert activity is only the offline last-seen pattern."
       ],
-      "expected_result": "No second line of name text; no full text expansion in the list row without explicit user action (if product forbids)."
-    },
-    {
-      "id": "KUDO-35-FML-SAF-PRE",
-      "category": "safety_badge",
-      "title": "Prerequisite — confirm badge state matrix with design",
-      "test_type": "positive",
-      "preconditions": "Design/product table from KUDO-35 available.",
-      "steps": [
-        "Map each badge state from the table to a live or mock member state.",
-        "For each state, capture screenshot and label."
-      ],
-      "expected_result": "Authoritative list of states (e.g. Safe / Not safe / unknown) and assets is agreed; subsequent SAF cases use those exact labels."
-    },
-    {
-      "id": "KUDO-35-FML-SAF-001",
-      "category": "safety_badge",
-      "title": "Badge state TBD-A — visual and semantics (replace label when matrix fixed)",
-      "test_type": "positive",
-      "preconditions": "Member forced to first badge state from design table (TBD—rename case when matrix attached).",
-      "steps": [
-        "Open list; inspect badge on the row."
-      ],
-      "expected_result": "Badge matches design for state TBD-A (color, icon, label). Blocking until matrix exists."
-    },
-    {
-      "id": "KUDO-35-FML-SAF-002",
-      "category": "safety_badge",
-      "title": "Badge state TBD-B — visual and semantics",
-      "test_type": "positive",
-      "preconditions": "Member forced to second badge state from design table.",
-      "steps": [
-        "Inspect row badge."
-      ],
-      "expected_result": "Matches design for TBD-B."
-    },
-    {
-      "id": "KUDO-35-FML-SAF-003",
-      "category": "safety_badge",
-      "title": "Badge state TBD-C — repeat for each additional table row",
-      "test_type": "positive",
-      "preconditions": "Duplicate this case in test management for every remaining row in the design table once known.",
-      "steps": [
-        "Force state; verify badge."
-      ],
-      "expected_result": "One passing verification per design row; no undefined states shipped."
-    },
-    {
-      "id": "KUDO-35-FML-SAF-TR-001",
-      "category": "safety_badge",
-      "title": "Transition Safe → Not safe updates badge without stale delay beyond spec",
-      "test_type": "positive",
-      "preconditions": "Controllable fixture toggling safety.",
-      "steps": [
-        "Start Safe; open list.",
-        "Toggle to Not safe; wait for list refresh cycle or foreground refresh.",
-        "Observe badge and list ordering."
-      ],
-      "expected_result": "Badge shows Not safe; member moves to Not safe ordering group when refresh applies; no indefinite stale Safe badge."
-    },
-    {
-      "id": "KUDO-35-FML-SAF-TR-002",
-      "category": "safety_badge",
-      "title": "Transition Not safe → Safe",
-      "test_type": "positive",
-      "preconditions": "Inverse of SAF-TR-001.",
-      "steps": [
-        "Toggle Not safe to Safe; observe after refresh."
-      ],
-      "expected_result": "Badge Safe; member sorts into Safe group per ordering rules."
-    },
-    {
-      "id": "KUDO-35-FML-SPD-001",
-      "category": "speed",
-      "title": "Speed shown only when member In a vehicle",
-      "test_type": "positive",
-      "preconditions": "Member GPS indicates speed > 6 km/h with hysteresis satisfied (see RC default 6 s in hysteresis cases).",
-      "steps": [
-        "Open list; locate member in vehicle state."
-      ],
-      "expected_result": "Speed value visible on row (unit per product); consistent with movement state."
-    },
-    {
-      "id": "KUDO-35-FML-SPD-002",
-      "category": "speed",
-      "title": "Negative — walking (1–6 km/h) hides speed",
-      "test_type": "negative",
-      "preconditions": "Member walking per GPS-derived speed band; not in vehicle.",
-      "steps": [
-        "View row."
-      ],
-      "expected_result": "Speed is not shown."
-    },
-    {
-      "id": "KUDO-35-FML-SPD-003",
-      "category": "speed",
-      "title": "Negative — stationary / no movement hides speed",
-      "test_type": "negative",
-      "preconditions": "Member stationary.",
-      "steps": [
-        "View row."
-      ],
-      "expected_result": "Speed hidden."
-    },
-    {
-      "id": "KUDO-35-FML-SPD-004",
-      "category": "speed",
-      "title": "Negative — no GPS / no location hides speed",
-      "test_type": "negative",
-      "preconditions": "Location unavailable for member.",
-      "steps": [
-        "View row."
-      ],
-      "expected_result": "Speed hidden; activity may show “no location” per activity rules—speed still absent."
-    },
-    {
-      "id": "KUDO-35-FML-BAT-001",
-      "category": "low_battery",
-      "title": "Low battery label exact copy “Low battery” under default RC threshold",
-      "test_type": "positive",
-      "preconditions": "RC low-battery threshold at default 10%; member device battery < 10% (or mocked).",
-      "steps": [
-        "Open list; read low-battery indicator text if shown."
-      ],
-      "expected_result": "Indicator appears; visible label text is exactly “Low battery” (case and spacing per final copy deck)."
-    },
-    {
-      "id": "KUDO-35-FML-BAT-002",
-      "category": "low_battery",
-      "title": "Boundary — at threshold 10% (inclusive/exclusive per implementation)",
-      "test_type": "positive",
-      "preconditions": "Ability to set battery to exactly 10% or 9.9%.",
-      "steps": [
-        "At 10%, note indicator presence.",
-        "At just below 10%, note presence."
-      ],
-      "expected_result": "Behavior matches implementation doc; document inclusive/exclusive rule for regression."
-    },
-    {
-      "id": "KUDO-35-FML-BAT-003",
-      "category": "low_battery",
-      "title": "Negative — battery at or above threshold does not show indicator",
-      "test_type": "negative",
-      "preconditions": "Battery ≥ threshold (e.g. 11% with default 10%).",
-      "steps": [
-        "View row."
-      ],
-      "expected_result": "No “Low battery” indicator."
-    },
-    {
-      "id": "KUDO-35-FML-BAT-004",
-      "category": "low_battery",
-      "title": "RC overrides low-battery threshold",
-      "test_type": "positive",
-      "preconditions": "RC threshold changed (e.g. 20%); battery set between old and new thresholds.",
-      "steps": [
-        "Verify indicator appears only when below new threshold."
-      ],
-      "expected_result": "RC value drives visibility; default remains 10% when RC absent."
-    },
-    {
-      "id": "KUDO-35-FML-BAT-005",
-      "category": "low_battery",
-      "title": "Low battery yes/no feeds activity status consistently",
-      "test_type": "positive",
-      "preconditions": "Member online; other activity fragments present.",
-      "steps": [
-        "With low battery, read full activity text.",
-        "With sufficient battery, read activity text."
-      ],
-      "expected_result": "Activity composition reflects low battery yes/no per spec; no contradiction with row-level low-battery chip."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-001",
-      "category": "health_indicators",
-      "title": "Negative — all health indicators hidden when In a vehicle",
-      "test_type": "negative",
-      "preconditions": "Member in vehicle state; health data exists for today.",
-      "steps": [
-        "View row."
-      ],
-      "expected_result": "No Steps, Sleep, Heart rate, Blood pressure, or Blood sugar summary lines on the row."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-002",
-      "category": "health_indicators",
-      "title": "Today metrics use viewing member local timezone for “today” boundary",
-      "test_type": "positive",
-      "preconditions": "Viewer timezone differs from data source day boundary scenario (fixture); health events near midnight.",
-      "steps": [
-        "Compare which readings appear vs viewer’s local calendar day."
-      ],
-      "expected_result": "Only metrics belonging to “today” in the viewing member’s local timezone appear (per spec); document edge case at day boundary."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-003",
-      "category": "health_indicators",
-      "title": "Interpretation A — at most two distinct health indicator types shown",
-      "test_type": "positive",
-      "preconditions": "PM selects interpretation A: “up to closest 2 indicators” read as at most two metric types. Fresh values for 3+ types today.",
-      "steps": [
-        "Open row; count distinct indicator types displayed."
-      ],
-      "expected_result": "No more than two indicator types visible; chosen types are the “closest” per product definition of recency."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-004",
-      "category": "health_indicators",
-      "title": "Interpretation B — latest three readings drawn from two indicator types",
-      "test_type": "positive",
-      "preconditions": "PM selects interpretation B: “latest 3 values from 2 indicators”. Fixture with multiple samples per type.",
-      "steps": [
-        "Verify which values appear and that they are the latest three datapoints spanning at most two types."
-      ],
-      "expected_result": "UI matches interpretation B; if PM leaves A, mark this case N/A."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-005",
-      "category": "health_indicators",
-      "title": "Tie-break when timestamps equal — Blood pressure before Blood sugar before Sleep before Heart rate before Steps",
-      "test_type": "positive",
-      "preconditions": "Synthetic or logged data with identical timestamps to the owner for multiple types.",
-      "steps": [
-        "Observe which two types win when only two may show (or ordering under interpretation B)."
-      ],
-      "expected_result": "Priority order matches: Blood pressure → Blood sugar → Sleep → Heart rate → Steps."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-FMT-001",
-      "category": "health_indicators",
-      "title": "Steps format matches example (e.g. 1,843)",
-      "test_type": "positive",
-      "preconditions": "Known step count.",
-      "steps": [
-        "Compare displayed Steps string to locale thousands separator rules."
-      ],
-      "expected_result": "Format like `1,843` for en-US style; matches final copy guide."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-FMT-002",
-      "category": "health_indicators",
-      "title": "Sleep format matches example (e.g. 5hr34m)",
-      "test_type": "positive",
-      "preconditions": "Known sleep duration.",
-      "steps": [
-        "Read Sleep field."
-      ],
-      "expected_result": "Format matches spec example; spacing and units per copy."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-FMT-003",
-      "category": "health_indicators",
-      "title": "Heart rate format (e.g. 87 BPM)",
-      "test_type": "positive",
-      "preconditions": "Known HR.",
-      "steps": [
-        "Read Heart rate field."
-      ],
-      "expected_result": "Includes BPM (or localized equivalent) per final copy."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-FMT-004",
-      "category": "health_indicators",
-      "title": "Blood pressure format and units (verify mmHg vs ticket typo mmHG)",
-      "test_type": "positive",
-      "preconditions": "Known BP reading.",
-      "steps": [
-        "Read Blood pressure display."
-      ],
-      "expected_result": "Matches approved copy (e.g. `123/85 mmHg`); ticket typo `mmHG` must not ship if copy uses correct casing."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-FMT-005",
-      "category": "health_indicators",
-      "title": "Blood sugar format (e.g. 6.6 mmol/L); ticket typo “Bloog” must not ship",
-      "test_type": "positive",
-      "preconditions": "Known glucose.",
-      "steps": [
-        "Read Blood sugar display."
-      ],
-      "expected_result": "Correct spelling “Blood sugar”; value format `6.6 mmol/L` or localized unit per product."
-    },
-    {
-      "id": "KUDO-35-FML-HLT-TZ-001",
-      "category": "health_indicators",
-      "title": "Cross-timezone — member vs viewer “today” if spec defines both",
-      "test_type": "positive",
-      "preconditions": "Spec clarifies whose timezone wins for shared data; fixture across zones.",
-      "steps": [
-        "Compare displayed metrics to spec boundary definition."
-      ],
-      "expected_result": "Matches documented rule; if spec only says viewer TZ, align with HLT-002."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-001",
-      "category": "activity_status_online",
-      "title": "Activity text max two lines; overflow trimmed",
-      "test_type": "positive",
-      "preconditions": "Member online with many simultaneous status factors (place + movement + phone + weather + time + connectivity + battery).",
-      "steps": [
-        "View activity status on row."
-      ],
-      "expected_result": "At most two lines; ellipsis/trim without breaking layout."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-002",
-      "category": "activity_status_online",
-      "title": "Place — at home / work / saved place when geofence matches",
-      "test_type": "positive",
-      "preconditions": "GPS/geofence places member in labeled zone.",
-      "steps": [
-        "Read activity statement."
-      ],
-      "expected_result": "Contains correct place class per product strings (home/work/saved)."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-003",
-      "category": "activity_status_online",
-      "title": "Place — other location stayed before (stay ≥ RC minutes, default 20)",
-      "test_type": "positive",
-      "preconditions": "Prior visit exceeded stayed threshold; currently at that other location.",
-      "steps": [
-        "Verify activity references “stayed before” semantics per copy."
-      ],
-      "expected_result": "Correct classification; threshold from RC (default 20 min)."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-004",
-      "category": "activity_status_online",
-      "title": "Place — other location never stayed before",
-      "test_type": "positive",
-      "preconditions": "First-time short visit or stay duration under threshold.",
-      "steps": [
-        "Read activity."
-      ],
-      "expected_result": "Matches “never stayed” branch per copy."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-005",
-      "category": "activity_status_online",
-      "title": "Movement — no GPS shows no-location branch",
-      "test_type": "positive",
-      "preconditions": "GPS absent.",
-      "steps": [
-        "Read activity."
-      ],
-      "expected_result": "Reflects no location per formula; no vehicle speed line (see SPD cases)."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-006",
-      "category": "activity_status_online",
-      "title": "Precise location off vs on reflected in status",
-      "test_type": "positive",
-      "preconditions": "Toggle precise location permission.",
-      "steps": [
-        "Compare activity wording for precise off vs on."
-      ],
-      "expected_result": "Matches product copy for reduced precision state."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-007",
-      "category": "activity_status_online",
-      "title": "Walking band 1–6 km/h and vehicle >6 km/h with hysteresis",
-      "test_type": "positive",
-      "preconditions": "RC hysteresis default 6 s; ability to simulate speeds.",
-      "steps": [
-        "Oscillate around 6 km/h boundary; observe how long state persists before flip."
-      ],
-      "expected_result": "State changes only after >6 s in new movement class (per spec); matches walk vs vehicle strings."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-008",
-      "category": "activity_status_online",
-      "title": "Phone — in call state appears when on call",
-      "test_type": "positive",
-      "preconditions": "Member on active call.",
-      "steps": [
-        "Read activity."
-      ],
-      "expected_result": "Call fragment present per copy."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-009",
-      "category": "activity_status_online",
-      "title": "Phone — using phone (unlocked and/or touch)",
-      "test_type": "positive",
-      "preconditions": "Screen unlocked / touch events generating.",
-      "steps": [
-        "Read activity."
-      ],
-      "expected_result": "Fragment appears per rules; does not falsely show when locked and idle if spec forbids."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-010",
-      "category": "activity_status_online",
-      "title": "Phone stationary from motion sensor true/false",
-      "test_type": "positive",
-      "preconditions": "Device motion controllable.",
-      "steps": [
-        "Compare activity when phone moving vs stationary."
-      ],
-      "expected_result": "Motion stationary flag influences statement as per product copy."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-011",
-      "category": "activity_status_online",
-      "title": "Severe weather — heavy rain / snow / storm at member location",
-      "test_type": "positive",
-      "preconditions": "Weather mock or live severe condition.",
-      "steps": [
-        "Read activity."
-      ],
-      "expected_result": "Weather fragment appears only for qualifying severities per product."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-012",
-      "category": "activity_status_online",
-      "title": "Local late night 21:00–05:00 for the person",
-      "test_type": "positive",
-      "preconditions": "Device local time in window.",
-      "steps": [
-        "Read activity."
-      ],
-      "expected_result": "Late-night fragment appears in window; absent outside."
-    },
-    {
-      "id": "KUDO-35-FML-ACT-013",
-      "category": "activity_status_online",
-      "title": "Online connectivity — non-offline activity may include connectivity fragment",
-      "test_type": "positive",
-      "preconditions": "Member online.",
-      "steps": [
-        "Read activity for optional connectivity wording."
-      ],
-      "expected_result": "Matches spec for online (if no extra fragment, document)."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-001",
-      "category": "activity_status_offline",
-      "title": "Offline — only “No connection, last seen …” family; last seen <1 min → just now",
-      "test_type": "positive",
-      "preconditions": "Member offline; last seen <1 minute ago.",
-      "steps": [
-        "Read entire activity string."
-      ],
-      "expected_result": "Exactly the offline template; text includes “No connection, last seen just now”; no place/movement/weather/battery fragments."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-002",
-      "category": "activity_status_offline",
-      "title": "Offline — 1≤X<60 minutes → “No connection, last seen Xm ago”",
-      "test_type": "positive",
-      "preconditions": "Last seen in minute band.",
-      "steps": [
-        "Verify X matches elapsed minutes (floor/round per implementation—document)."
-      ],
-      "expected_result": "Only offline string family; correct minute wording."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-003",
-      "category": "activity_status_offline",
-      "title": "Offline — <24 h → “Yh ago” with Y = hours % 24 (validate vs app)",
-      "test_type": "positive",
-      "preconditions": "Last seen e.g. 25 h ago (ticket math ambiguous with “<24h” branch—exercise boundaries 23h, 24h, 25h, 47h).",
-      "steps": [
-        "For each fixture, record displayed Y.",
-        "Compare to ticket formula and to sensible wall-clock hours."
-      ],
-      "expected_result": "Implementation is consistent and documented; escalate if ticket `% 24` conflicts with UX (e.g. 25h should not show as 1h without PM approval)."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-004",
-      "category": "activity_status_offline",
-      "title": "Offline — <30 days → “Zd ago” with Z = days % 30 (validate edge cases)",
-      "test_type": "positive",
-      "preconditions": "Last seen spanning day buckets crossing 24h and 30d boundaries.",
-      "steps": [
-        "Verify Z for known elapsed days.",
-        "Note ambiguity when ticket `% 30` conflicts with calendar clarity."
-      ],
-      "expected_result": "Matches shipping app behavior with written acceptance of formula vs user-understandable days."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-005",
-      "category": "activity_status_offline",
-      "title": "Offline — beyond threshold → “No connection long time ago”",
-      "test_type": "positive",
-      "preconditions": "Last seen >30 days or implementation upper bound.",
-      "steps": [
-        "Read status."
-      ],
-      "expected_result": "Shows long-time string; no Xm/Yh/Zd variants incorrectly."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-NEG-001",
-      "category": "activity_status_offline",
-      "title": "Negative — offline row must not show speed or health summaries",
-      "test_type": "negative",
-      "preconditions": "Member offline; historical health exists.",
-      "steps": [
-        "Inspect row."
-      ],
-      "expected_result": "No speed; no health chips (unless product explicitly allows—default expect hidden per list row rules)."
-    },
-    {
-      "id": "KUDO-35-FML-OFF-NEG-002",
-      "category": "activity_status_offline",
-      "title": "Negative — offline string contains no extra status fragments",
-      "test_type": "negative",
-      "preconditions": "Offline with rich prior context.",
-      "steps": [
-        "Read full activity."
-      ],
-      "expected_result": "No home/work/walk/vehicle/weather fragments appended to offline template."
-    },
-    {
-      "id": "KUDO-35-FML-RC-001",
-      "category": "remote_config_matrix",
-      "title": "RC — foreground list refresh interval default 5 s (single focused case)",
-      "test_type": "positive",
-      "preconditions": "RC at default; measurable list update.",
-      "steps": [
-        "Confirm refresh cadence ≈5 s as in REL-001."
-      ],
-      "expected_result": "Passes default matrix cell for interval."
-    },
-    {
-      "id": "KUDO-35-FML-RC-002",
-      "category": "remote_config_matrix",
-      "title": "RC — low battery threshold default 10%",
-      "test_type": "positive",
-      "preconditions": "RC at default.",
-      "steps": [
-        "Exercise BAT-002 boundary at 10%."
-      ],
-      "expected_result": "Default threshold verified."
-    },
-    {
-      "id": "KUDO-35-FML-RC-003",
-      "category": "remote_config_matrix",
-      "title": "RC — stayed-place minutes default 20",
-      "test_type": "positive",
-      "preconditions": "RC at default; visit duration controllable.",
-      "steps": [
-        "Stay 19 min vs 21 min at novel place; compare ACT-003/004 outcomes."
-      ],
-      "expected_result": "20-minute default drives stayed classification."
-    },
-    {
-      "id": "KUDO-35-FML-RC-004",
-      "category": "remote_config_matrix",
-      "title": "RC — walk/vehicle hysteresis default 6 s",
-      "test_type": "positive",
-      "preconditions": "RC at default.",
-      "steps": [
-        "Repeat ACT-007 focusing on 6 s requirement."
-      ],
-      "expected_result": "6 s hysteresis honored from RC default."
-    },
-    {
-      "id": "KUDO-35-FML-RC-005",
-      "category": "remote_config_matrix",
-      "title": "RC matrix — overridden values for all four keys in one session (if harness allows)",
-      "test_type": "positive",
-      "preconditions": "Staging RC or mock exposing all four parameters.",
-      "steps": [
-        "Set non-default interval, battery threshold, stayed minutes, hysteresis.",
-        "Re-run condensed checks for each parameter."
-      ],
-      "expected_result": "Each non-default value is reflected in UI behavior; mark blocked if manual RC publish is not possible."
-    },
-    {
-      "id": "KUDO-35-FML-NEG-HLT-001",
-      "category": "health_indicators",
-      "title": "Negative — no fabricated health when source has no today data",
-      "test_type": "negative",
-      "preconditions": "Health permissions on but empty today.",
-      "steps": [
-        "View row (not in vehicle)."
-      ],
-      "expected_result": "No placeholder fake metrics; empty state per design."
-    },
-    {
-      "id": "KUDO-35-FML-NEG-SPD-001",
-      "category": "speed",
-      "title": "Negative — speed hidden during walk even if GPS noisy spike",
-      "test_type": "negative",
-      "preconditions": "Simulate brief GPS spike above 6 km/h shorter than hysteresis while true state walking.",
-      "steps": [
-        "Observe row during spike window."
-      ],
-      "expected_result": "Speed does not flash vehicle-only UI without sustained vehicle state."
+      "expected_result": "No speed when not in vehicle; offline rows do not mix in online activity fragments."
     }
   ]
 }
