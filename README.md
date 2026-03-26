@@ -27,7 +27,8 @@ For a **single task**, commits and merge requests should usually include **only*
 ## Layout
 
 | Path | Purpose |
-|------|--------|
+| ---- | ------- |
+
 <<<<<<< HEAD
 | `scripts/consolidate_test_cases.py` | Consolidation script (copy of platform `scripts/consolidate_test_cases.py`; run from **this** repo root). |
 | `scripts/requirements.txt` | `openpyxl` for the script. |
@@ -46,7 +47,8 @@ For a **single task**, commits and merge requests should usually include **only*
 | `tasks/<task_id>_<slug>/metadata.json` | Optional **human/platform** fields only. The merge script **does not** write here. |
 | `consolidation_state.json` | **Only** written by the merge script: `baseline_file_relative` (= latest output path), `processed_task_folders` (folders to **skip** next run), timestamps. **Gitignored** here. |
 | `output/latest_consolidated.xlsx` | **Global** workbook: sheet `Consolidated`, **first column `Task ID`** (task folder name), then test columns, then `_…` meta columns. **Gitignored** here. |
->>>>>>> 86de912 (Update code)
+
+> > > > > > > 86de912 (Update code)
 
 ## How consolidation works
 
@@ -69,6 +71,7 @@ python scripts/consolidate_test_cases.py \
 ```
 
 <<<<<<< HEAD
+
 1. **State + rolling file** — `consolidation_state.json` records `included_task_slugs` and `last_output_relative` (usually `output/latest_consolidated.xlsx`).
 2. **Next run** — The script loads that workbook, keeps all rows, and **only appends** folders under `tasks/` that are **not** in `included_task_slugs`.
 3. **After write** — State is updated with the **full** slug list. By default, only task folders that had **new** rows merged this run get an updated `metadata.json` **consolidation** block; use `--refresh-all-task-metadata` to refresh every merged folder (legacy).
@@ -79,12 +82,13 @@ If the previous consolidated file is missing but state still lists slugs, the sc
 
 When developing inside the **full platform monorepo**, you can instead run the same logic from the repo root:
 
-`pip install -r scripts/requirements-testcases.txt` and use paths `example/test-cases-repo/baseline/...`, etc. (see `scripts/consolidate_test_cases.py` docstring).
-=======
+# `pip install -r scripts/requirements-testcases.txt` and use paths `example/test-cases-repo/baseline/...`, etc. (see `scripts/consolidate_test_cases.py` docstring).
+
 Options: `--state-file`, `--output-name`, `--baseline`, `--baseline-sheet`, `--task-sheet`.
 
 Monorepo: `pip install -r scripts/requirements-testcases.txt` and paths under `example/test-cases-repo/`.
->>>>>>> 86de912 (Update code)
+
+> > > > > > > 86de912 (Update code)
 
 ## Platform integration
 
@@ -95,3 +99,5 @@ Monorepo: `pip install -r scripts/requirements-testcases.txt` and paths under `e
 ## Sample folders
 
 - `tasks/example-feature-auth/`, `tasks/example-api-rate-limit/`, `tasks/KAN-10-user-profile-management/` — examples (naming patterns may mix legacy and `KAN-*_*` style).
+
+//test
