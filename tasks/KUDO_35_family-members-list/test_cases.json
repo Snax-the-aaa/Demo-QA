@@ -1,10 +1,7 @@
 {
-  "catalog_format": "test_cases_json_v1",
-  "task": {
-    "id": "KUDO-35",
-    "title": "Family members list — manual UAT/regression"
-  },
-  "prerequisites_global": [
+  "jira_key": "KUDO-35",
+  "title": "Family members list — manual UAT/regression",
+  "prerequisites": [
     "Safety badge states and artwork must be confirmed against the product/design table referenced in Jira KUDO-35. Until that matrix is attached to the ticket or spec, badge-specific cases below are authored with explicit TBD state names—do not sign off badge visuals without that alignment.",
     "Firebase Remote Config keys for family list refresh interval, low-battery threshold, stayed-place minutes, and walk/vehicle hysteresis must be identifiable in the RC console (or documented) for the RC matrix cases.",
     "Health data requires Apple Health (iOS) or Health Connect (Android) test fixtures and members in known movement/location states. Use a staging build with RC overrides where production RC cannot be changed."
