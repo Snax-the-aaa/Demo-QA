@@ -1,0 +1,616 @@
+{
+  "jira_key": "KUDO-35",
+  "task_folder": "KUDO-35_family-members-list",
+  "title": "Family members list — manual test catalog",
+  "no_authentication_scope": "No login or authenticated session is required for this screen. The viewer and each family member row are identified via the QA harness only: seeded `family_harness_id` and per-row `member_harness_id` bound to the app install (or equivalent: staging deep link query params / environment flag). Preconditions name harness slots (e.g. member A = `harness_m1`)—never passwords, tokens, or sign-in.",
+  "prerequisites": [
+    "See `no_authentication_scope` for how viewer and members are identified without login.",
+    "Staging build with Firebase Remote Config readable/overridable: family_list_refresh_interval_s (default 5), low_battery_threshold_pct (default 10), place_stay_minutes (default 20), walk_vehicle_hysteresis_s (default 6).",
+    "Safety badge artwork and state names must match the product design table (not in Jira); until attached, assert placeholder state keys from engineering.",
+    "Health metrics for members can be injected via Apple Health / Health Connect test doubles or backend fixture timestamps as agreed with the team."
+  ],
+  "deprecated_test_cases": [
+    {
+      "id": "KUDO-35-DRAFT-LOGIN-ORDER-01",
+      "deprecated": true,
+      "reason": "Prior draft assumed signed-in user; feature scope is no-auth. Replaced by KUDO-35-TC-001 through KUDO-35-TC-006.",
+      "replaced_by": [
+        "KUDO-35-TC-001",
+        "KUDO-35-TC-002",
+        "KUDO-35-TC-003"
+      ]
+    },
+    {
+      "id": "KUDO-35-DRAFT-LOGIN-REFRESH-01",
+      "deprecated": true,
+      "reason": "Prior draft mixed auth with refresh checks. Replaced by KUDO-35-TC-010 through KUDO-35-TC-013.",
+      "replaced_by": [
+        "KUDO-35-TC-010",
+        "KUDO-35-TC-011",
+        "KUDO-35-TC-012"
+      ]
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "KUDO-35-TC-001",
+      "category": "list_ordering",
+      "title": "Not safe block above safe; A–Z within each block",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. At least 3 members: two Not safe (names out of order alphabetically) and two Safe (out of order).",
+      "steps": [
+        "Open Family members list.",
+        "Record order of all rows except You.",
+        "Within Not safe, confirm names sort A→Z.",
+        "Within Safe, confirm names sort A→Z.",
+        "Confirm every Not safe row appears above every Safe row."
+      ],
+      "expected_result": "Ordering: all Not safe first (A→Z among them), then all Safe (A→Z among them). You excluded from this check (see TC-002)."
+    },
+    {
+      "id": "KUDO-35-TC-002",
+      "category": "list_ordering",
+      "title": "“You” row always last regardless of safety",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Include scenarios: (a) You is Not safe, (b) You is Safe, (c) You is only member.",
+      "steps": [
+        "For each harness scenario, open the list.",
+        "Locate the row labeled as the current viewer (You).",
+        "Confirm it is the bottom row in every scenario."
+      ],
+      "expected_result": "You is always the last row whether Not safe or Safe; still last when alone."
+    },
+    {
+      "id": "KUDO-35-TC-003",
+      "category": "list_ordering",
+      "title": "Tie / duplicate display names — stable secondary sort",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Two different members share the same display name prefix (or full duplicate if product allows).",
+      "steps": [
+        "Open list.",
+        "Observe order among duplicates.",
+        "Confirm list remains stable across refresh (no row swapping without data change)."
+      ],
+      "expected_result": "Order is deterministic per product rules (e.g. stable harness id); Not safe / Safe / You rules still hold."
+    },
+    {
+      "id": "KUDO-35-TC-004",
+      "category": "list_ordering",
+      "title": "Unicode / diacritics in alphabetical sort",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member names include unicode (e.g. Å, é, 中文) per locale collation product uses.",
+      "steps": [
+        "Open list.",
+        "Compare order to expected collation for that locale."
+      ],
+      "expected_result": "Sorting matches product locale rules within Not safe and Safe blocks."
+    },
+    {
+      "id": "KUDO-35-TC-005",
+      "category": "list_ordering",
+      "title": "Single non-you member + You",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Exactly one other member besides You.",
+      "steps": [
+        "Open list.",
+        "Confirm other member is first, You last."
+      ],
+      "expected_result": "Two rows: other member on top, You at bottom."
+    },
+    {
+      "id": "KUDO-35-TC-006",
+      "category": "list_ordering",
+      "title": "All members Safe — You still last",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. All harness members Safe.",
+      "steps": [
+        "Open list.",
+        "Confirm full list is alphabetical Safe block with You last."
+      ],
+      "expected_result": "Only Safe section (A→Z) then You."
+    },
+    {
+      "id": "KUDO-35-TC-010",
+      "category": "refresh",
+      "title": "Reload when returning from background",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Ability to change member order or safety from fixture while app is backgrounded.",
+      "steps": [
+        "On list screen, note order.",
+        "Background app; change data so order should change.",
+        "Return to foreground on same screen.",
+        "Confirm list reflects new order without force-quit."
+      ],
+      "expected_result": "Resume from background triggers reload; ordering and badges update."
+    },
+    {
+      "id": "KUDO-35-TC-011",
+      "category": "refresh",
+      "title": "Foreground refresh interval — default 5 s from RC",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. RC `family_list_refresh_interval_s` at default (5). Data can change without navigation.",
+      "steps": [
+        "Stay on list in foreground.",
+        "Change fixture affecting a visible field (e.g. activity line).",
+        "Wait for at least one interval without leaving screen.",
+        "Observe update."
+      ],
+      "expected_result": "UI picks up changes on the RC interval (~5 s default) while foregrounded."
+    },
+    {
+      "id": "KUDO-35-TC-012",
+      "category": "refresh",
+      "title": "Foreground interval respects non-default RC",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Staging override: set refresh interval to a different value (e.g. 15 s).",
+      "steps": [
+        "With stopwatch, confirm updates align with new interval.",
+        "Restore default and spot-check."
+      ],
+      "expected_result": "Refresh cadence follows RC; restoring default restores ~5 s behavior."
+    },
+    {
+      "id": "KUDO-35-TC-013",
+      "category": "refresh",
+      "title": "No duplicate rows or broken scroll after refresh",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Mid-scroll on a long list.",
+      "steps": [
+        "Scroll to middle.",
+        "Wait through at least one refresh cycle.",
+        "Scroll top to bottom."
+      ],
+      "expected_result": "No duplicate member rows; scroll remains usable; no permanent loading stuck state."
+    },
+    {
+      "id": "KUDO-35-TC-020",
+      "category": "row_ui",
+      "title": "Avatar present on every row",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth.",
+      "steps": [
+        "Open list.",
+        "For each member row verify avatar image/placeholder renders."
+      ],
+      "expected_result": "Each row shows an avatar per design."
+    },
+    {
+      "id": "KUDO-35-TC-021",
+      "category": "row_ui",
+      "title": "Name single line; trimmed/ellipsized when long",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. At least one very long display name.",
+      "steps": [
+        "Open list.",
+        "Confirm name stays on one line.",
+        "Confirm overflow is trimmed or ellipsized (no wrap to second line in name field)."
+      ],
+      "expected_result": "Name max one line; excess trimmed per platform pattern."
+    },
+    {
+      "id": "KUDO-35-TC-022",
+      "category": "row_ui",
+      "title": "Safety badge per member per product table",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Members in distinct safety states covered by design table.",
+      "steps": [
+        "For each state, open row.",
+        "Compare badge to design matrix."
+      ],
+      "expected_result": "Badge matches correct row for each safety state (visual + semantics per table)."
+    },
+    {
+      "id": "KUDO-35-TC-023",
+      "category": "row_ui",
+      "title": "Speed hidden when not in vehicle",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member in walking or stationary (not vehicle) with GPS.",
+      "steps": [
+        "Open list.",
+        "Inspect row for speed/speedometer element."
+      ],
+      "expected_result": "Speed not shown."
+    },
+    {
+      "id": "KUDO-35-TC-024",
+      "category": "row_ui",
+      "title": "Speed shown only in vehicle",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member in sustained In a vehicle state (>6 km/h, hysteresis satisfied—see activity cases).",
+      "steps": [
+        "Open list.",
+        "Confirm speed is visible for that member.",
+        "Confirm unit/format matches spec."
+      ],
+      "expected_result": "Speed appears only for vehicle state."
+    },
+    {
+      "id": "KUDO-35-TC-030",
+      "category": "low_battery",
+      "title": "“Low battery” exact copy below RC threshold",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Control member device battery report: below default 10% with RC `low_battery_threshold_pct` = 10.",
+      "steps": [
+        "Set battery < 10%.",
+        "Open list.",
+        "Read indicator text."
+      ],
+      "expected_result": "Exact visible copy includes “Low battery” as specified."
+    },
+    {
+      "id": "KUDO-35-TC-031",
+      "category": "low_battery",
+      "title": "No low battery at or above threshold boundary",
+      "test_type": "negative",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Battery at 10% or above with default RC threshold 10%.",
+      "steps": [
+        "Open list.",
+        "Confirm no low-battery row indicator (per product: strictly below threshold)."
+      ],
+      "expected_result": "At threshold or above: no “Low battery” indicator."
+    },
+    {
+      "id": "KUDO-35-TC-032",
+      "category": "low_battery",
+      "title": "RC threshold change updates visibility",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Staging can set `low_battery_threshold_pct` to e.g. 20%.",
+      "steps": [
+        "With battery at 15%, default threshold: note visibility.",
+        "Raise threshold to 20%: indicator should appear.",
+        "Lower threshold: indicator clears."
+      ],
+      "expected_result": "Threshold follows RC."
+    },
+    {
+      "id": "KUDO-35-TC-040",
+      "category": "health_indicators",
+      "title": "Health hidden when member In a vehicle",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member has today’s health samples but is In a vehicle.",
+      "steps": [
+        "Open list.",
+        "Confirm no health indicators (steps/sleep/HR/BP/BS) on row."
+      ],
+      "expected_result": "No health chips/lines while in vehicle."
+    },
+    {
+      "id": "KUDO-35-TC-041",
+      "category": "health_indicators",
+      "title": "“Today” uses viewer local timezone",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Viewer TZ differs from UTC; member has samples near UTC midnight boundary.",
+      "steps": [
+        "Set viewer TZ and fixture timestamps.",
+        "Open list.",
+        "Confirm only today-in-viewer-TZ metrics contribute."
+      ],
+      "expected_result": "Health “today” aligns with viewer timezone day window."
+    },
+    {
+      "id": "KUDO-35-TC-042",
+      "category": "health_indicators",
+      "title": "At most two indicator types; latest values per type",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member not in vehicle; fixture has fresh values for 3+ indicator types today.",
+      "steps": [
+        "Open list.",
+        "Count distinct health indicator types shown (max 2).",
+        "Confirm values are latest per type."
+      ],
+      "expected_result": "Shows up to two indicator types with latest values for each."
+    },
+    {
+      "id": "KUDO-35-TC-043",
+      "category": "health_indicators",
+      "title": "Ambiguity pack — product chose 2 types / 2 latest readings (sign-off)",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Spec text mixed “2 indicators” vs “latest 3 values from 2 indicators”; harness documents product decision.",
+      "steps": [
+        "Confirm UI shows at most two metric types.",
+        "If product shows two readings from one type + one from another, document as pass per signed-off rule."
+      ],
+      "expected_result": "Behavior matches signed-off interpretation recorded in test evidence."
+    },
+    {
+      "id": "KUDO-35-TC-044",
+      "category": "health_indicators",
+      "title": "Tie-break same timestamp: BP before BS before Sleep before HR before Steps",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Fixture: two types share identical owner timestamp; also full chain tie scenario if possible.",
+      "steps": [
+        "Open list.",
+        "Verify which types appear follow priority BP → Blood sugar → Sleep → Heart rate → Steps."
+      ],
+      "expected_result": "Priority order respected when timestamps tie."
+    },
+    {
+      "id": "KUDO-35-TC-045",
+      "category": "health_indicators",
+      "title": "Formatting: Steps, Sleep, HR, BP, Blood sugar",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Known sample values: steps 1843; sleep 5h34m; HR 87 BPM; BP 123/85 mmHg; blood sugar 6.6 mmol/L (note BP spelling mmHg).",
+      "steps": [
+        "Open list for member with each type.",
+        "Compare strings to spec formats."
+      ],
+      "expected_result": "Formats match: e.g. “1,843”, “5hr34m” or product-approved sleep format, “87 BPM”, “123/85 mmHG” per ticket copy, “6.6 mmol/L”."
+    },
+    {
+      "id": "KUDO-35-TC-046",
+      "category": "health_indicators",
+      "title": "No fabricated values when no data",
+      "test_type": "negative",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member not in vehicle; no health data today.",
+      "steps": [
+        "Open list.",
+        "Confirm no placeholder random numbers."
+      ],
+      "expected_result": "Empty or hidden health region—no fake metrics."
+    },
+    {
+      "id": "KUDO-35-TC-050",
+      "category": "activity_status",
+      "title": "Activity uses at most two lines; overflow trimmed",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member online; compose long activity string via multiple simultaneous signals if harness allows.",
+      "steps": [
+        "Open list.",
+        "Measure activity text lines (max 2).",
+        "Confirm ellipsis/clamp if needed."
+      ],
+      "expected_result": "≤2 lines; trimming per design."
+    },
+    {
+      "id": "KUDO-35-TC-051",
+      "category": "activity_status",
+      "title": "Stayed place — duration ≥ RC minutes (default 20)",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. GPS at “other” place with dwell ≥ 20 min (default RC `place_stay_minutes`).",
+      "steps": [
+        "Open list.",
+        "Confirm copy reflects stayed-before branch.",
+        "Shorten dwell below threshold: copy switches to never-stayed branch."
+      ],
+      "expected_result": "Stay classification follows RC minutes."
+    },
+    {
+      "id": "KUDO-35-TC-052",
+      "category": "activity_status",
+      "title": "Walking vs vehicle hysteresis (RC default 6 s)",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Speed oscillates around 6 km/h; RC `walk_vehicle_hysteresis_s` = 6.",
+      "steps": [
+        "Flip speed briefly across boundary; confirm no immediate flip-flop.",
+        "Hold new state >6 s; confirm state changes."
+      ],
+      "expected_result": "State changes only after sustained new movement class per hysteresis."
+    },
+    {
+      "id": "KUDO-35-TC-053",
+      "category": "activity_status",
+      "title": "Precise location off reflected when applicable",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Toggle precise location off for member device.",
+      "steps": [
+        "Open list.",
+        "Confirm activity mentions reduced precision per product copy."
+      ],
+      "expected_result": "Precise-off state appears in composed status when location exists."
+    },
+    {
+      "id": "KUDO-35-TC-054",
+      "category": "activity_status",
+      "title": "No GPS / call / phone use / weather / late night fragments when online rules apply",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Exercise: no GPS; in-call; screen active; heavy weather; local time 22:00 (late night window).",
+      "steps": [
+        "For each harness state, open list.",
+        "Confirm expected fragments appear in activity (per product composition rules)."
+      ],
+      "expected_result": "Online activity composition includes relevant elements; still not offline template."
+    },
+    {
+      "id": "KUDO-35-TC-055",
+      "category": "activity_status",
+      "title": "Low battery in activity matches row low-battery definition",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member online, battery below threshold.",
+      "steps": [
+        "Open list.",
+        "Confirm activity composition treats low battery consistently with row indicator rules."
+      ],
+      "expected_result": "Activity low-battery yes/no aligns with < threshold definition."
+    },
+    {
+      "id": "KUDO-35-TC-060",
+      "category": "offline_string",
+      "title": "Offline: last seen < 1 min → “just now”",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member offline; last seen <60s ago.",
+      "steps": [
+        "Open list.",
+        "Read activity."
+      ],
+      "expected_result": "Activity is only offline pattern; includes “No connection, last seen just now” (or equivalent per exact copy table)."
+    },
+    {
+      "id": "KUDO-35-TC-061",
+      "category": "offline_string",
+      "title": "Offline: 1–59 min → “Xm ago”",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Last seen 5 minutes ago.",
+      "steps": [
+        "Open list."
+      ],
+      "expected_result": "“No connection, last seen 5m ago” (minute bucket)."
+    },
+    {
+      "id": "KUDO-35-TC-062",
+      "category": "offline_string",
+      "title": "Offline: hours branch (<24h) → “Yh ago”",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Last seen 3 hours ago (same calendar day policy per product).",
+      "steps": [
+        "Open list."
+      ],
+      "expected_result": "Hour bucket text matches spec (y = hours mod 24 per ticket)."
+    },
+    {
+      "id": "KUDO-35-TC-063",
+      "category": "offline_string",
+      "title": "Offline: days branch (<30 days) → “Zd ago”",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Last seen 5 days ago.",
+      "steps": [
+        "Open list."
+      ],
+      "expected_result": "Day bucket text matches spec (z = days mod 30 per ticket)."
+    },
+    {
+      "id": "KUDO-35-TC-064",
+      "category": "offline_string",
+      "title": "Offline: very old → long time branch",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Last seen >30 days or product-defined long-time cutoff.",
+      "steps": [
+        "Open list."
+      ],
+      "expected_result": "“No connection long time ago” (or product exact string)."
+    },
+    {
+      "id": "KUDO-35-TC-065",
+      "category": "offline_string",
+      "title": "When online, offline template not used",
+      "test_type": "negative",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member online with rich activity inputs.",
+      "steps": [
+        "Open list.",
+        "Confirm activity is not the offline last-seen sentence."
+      ],
+      "expected_result": "No “No connection, last seen …” while online."
+    },
+    {
+      "id": "KUDO-35-TC-066",
+      "category": "offline_string",
+      "title": "Offline suppresses non-offline activity fragments",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member offline; would otherwise show place/movement if online.",
+      "steps": [
+        "Open list.",
+        "Confirm only offline last-seen string; no speed/health (per spec: health hidden in vehicle only applies when not offline row rules—confirm product: offline row shows offline string only)."
+      ],
+      "expected_result": "Offline row shows offline template; no mixed online place/speed/health clutter per product sign-off."
+    },
+    {
+      "id": "KUDO-35-TC-070",
+      "category": "remote_config",
+      "title": "All four RC keys observable in one staging session",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. RC overrides for refresh, battery %, stay minutes, hysteresis.",
+      "steps": [
+        "Change each key; observe corresponding UI/behavior.",
+        "Revert to defaults."
+      ],
+      "expected_result": "Each parameter maps to described behavior; defaults 5s / 10% / 20m / 6s."
+    },
+    {
+      "id": "KUDO-35-TC-071",
+      "category": "negative",
+      "title": "Walking speed range does not show vehicle speed UI",
+      "test_type": "negative",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Speed 1–6 km/h sustained.",
+      "steps": [
+        "Open list.",
+        "Confirm walking branch, no vehicle speed display."
+      ],
+      "expected_result": "No vehicle-only speed in walking band."
+    },
+    {
+      "id": "KUDO-35-TC-072",
+      "category": "negative",
+      "title": "Brief vehicle spike under hysteresis does not flip row",
+      "test_type": "negative",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. <6 s vehicle burst then back to walk.",
+      "steps": [
+        "Observe list row movement/vehicle indicators.",
+        "Confirm hysteresis prevents flicker."
+      ],
+      "expected_result": "No spurious vehicle state."
+    },
+    {
+      "id": "KUDO-35-TC-073",
+      "category": "activity_status",
+      "title": "Place — at home / work / saved places (geofence)",
+      "test_type": "positive",
+      "preconditions": "Harness: viewer = `harness_viewer`, family = `harness_family_alpha`. Members identified only by harness row IDs—no auth. Member GPS/fixture places `harness_m1` inside home, then work, then a saved-place geofence per product definitions.",
+      "steps": [
+        "For each place type, open Family members list.",
+        "Read activity line for that member.",
+        "Confirm copy matches product strings for home / work / saved-place branches."
+      ],
+      "expected_result": "Place-based clause reflects home, work, or saved place when geofence matches; still obeys two-line max and online (non-offline) composition rules."
+    },
+    {
+      "id": "KUDO-35-TC-074",
+      "category": "activity_status",
+      "title": "Place — other location never stayed before",
+      "test_type": "positive",
+      "preconditions": "Harness: member at an “other” coordinate with no prior stay history in fixture.",
+      "steps": [
+        "Open list.",
+        "Confirm activity uses the “never stayed before” branch for other places."
+      ],
+      "expected_result": "Never-stayed copy appears (per product); not classified as stayed until dwell ≥ RC stay minutes."
+    },
+    {
+      "id": "KUDO-35-TC-075",
+      "category": "activity_status",
+      "title": "Phone — in call appears in composed activity when online",
+      "test_type": "positive",
+      "preconditions": "Harness: member device in active call state; member online with location as needed for composition.",
+      "steps": [
+        "Start/stimulate call state for `harness_m1`.",
+        "Open list.",
+        "Confirm in-call fragment appears in activity per product copy."
+      ],
+      "expected_result": "In-call state contributes to activity string; not replaced by offline template while online."
+    },
+    {
+      "id": "KUDO-35-TC-076",
+      "category": "activity_status",
+      "title": "Phone — using phone (unlocked / touch) in activity",
+      "test_type": "positive",
+      "preconditions": "Harness: screen unlocked and/or touch events firing for member device; not in offline mode.",
+      "steps": [
+        "Open list while harness reports active phone use.",
+        "Confirm corresponding fragment in activity line."
+      ],
+      "expected_result": "Active phone-use signal appears in composed status per rules."
+    },
+    {
+      "id": "KUDO-35-TC-077",
+      "category": "activity_status",
+      "title": "Phone stationary (motion) reflected when online",
+      "test_type": "positive",
+      "preconditions": "Harness: motion sensor reports stationary vs moving for member device.",
+      "steps": [
+        "Set stationary true; open list — note activity.",
+        "Set stationary false; refresh — note change if product includes this facet."
+      ],
+      "expected_result": "Stationary/motion facet matches harness and product copy when included in the formula."
+    },
+    {
+      "id": "KUDO-35-TC-078",
+      "category": "activity_status",
+      "title": "Movement — no GPS vs no movement with location",
+      "test_type": "positive",
+      "preconditions": "Harness: (a) no GPS fix for member, (b) GPS fix with speed ~0 (no move).",
+      "steps": [
+        "For (a), open list — confirm “no location” / no GPS branch.",
+        "For (b), confirm no-move branch distinct from walking/vehicle."
+      ],
+      "expected_result": "Correct movement sub-branch for missing GPS vs zero movement with fix."
+    }
+  ]
+}
